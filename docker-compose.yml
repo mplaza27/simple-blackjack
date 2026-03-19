@@ -1,0 +1,25 @@
+services:
+  dev:
+    build: .
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./static:/app/static
+      - ./tests:/app/tests
+    command: python -m http.server 8080 --directory /app/static
+
+  test:
+    build: .
+    volumes:
+      - ./static:/app/static
+      - ./tests:/app/tests
+      - ./vitest.config.js:/app/vitest.config.js
+    command: npx vitest run
+
+  pytest:
+    build: .
+    volumes:
+      - ./tools:/app/tools
+      - ./tests:/app/tests
+      - ./pytest.ini:/app/pytest.ini
+    command: pytest tests/unit/

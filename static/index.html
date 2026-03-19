@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Blackjack Trainer</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+        <div id="table">
+            <!-- Top bar -->
+            <div id="top-bar">
+                <div class="top-left">
+                <div class="chips">Chips: <span id="bankroll">1000</span> <button id="reset-bankroll-btn" class="reset-btn">reset</button></div>
+                <div class="chips">Accuracy: <span id="accuracy-overall">—</span></div>
+            </div>
+                <div id="shuffle-indicator" style="display:none;">Shuffling...</div>
+                <div id="count-display" class="count-badge" title="Click to reveal count">
+                    <span id="count-label">Count:</span>
+                    <span id="count-value" class="count-hidden">???</span>
+                </div>
+            </div>
+
+            <!-- Dealer area -->
+            <div id="dealer-area">
+                <div class="label">Dealer</div>
+                <div id="dealer-cards" class="card-row"></div>
+                <div class="score">Score: <span id="dealer-score"></span></div>
+            </div>
+
+            <!-- Player area -->
+            <div id="player-area">
+                <div class="label">Player</div>
+                <div id="player-cards" class="card-row"></div>
+                <div class="score">Score: <span id="player-score"></span></div>
+            </div>
+
+            <!-- Message -->
+            <div id="message" class="message"></div>
+
+
+            <!-- Action buttons -->
+            <div id="action-buttons" style="display:none;">
+                <button id="hit-btn" class="action-btn">Hit</button>
+                <button id="stand-btn" class="action-btn">Stand</button>
+                <button id="double-btn" class="action-btn">Double</button>
+                <button id="split-btn" class="action-btn" disabled>Split</button>
+            </div>
+
+            <!-- Strategy hint & feedback -->
+            <div id="strategy-area">
+                <button id="hint-btn" class="hint-btn" title="Show what to do">Coach</button>
+                <span id="hint-text" class="hint-text"></span>
+                <div id="feedback-text" class="feedback-text"></div>
+                <div id="explanation-text" class="explanation-text"></div>
+            </div>
+
+            <!-- Betting controls -->
+            <div id="betting-controls">
+                <div class="bet-row">
+                    <span>Bet: <span id="bet-display">—</span></span>
+                    <button class="bet-btn" data-amount="10">10</button>
+                    <button class="bet-btn" data-amount="25">25</button>
+                    <button class="bet-btn" data-amount="50">50</button>
+                    <button class="bet-btn" data-amount="100">100</button>
+                    <button class="clear-bet-btn" id="clear-bet-btn">clear</button>
+                </div>
+                <button id="deal-btn" class="action-btn deal">Deal</button>
+            </div>
+
+            <!-- Count quiz -->
+            <div id="count-quiz" style="display:none;">
+                <div class="quiz-prompt">What's the running count?</div>
+                <div class="quiz-row">
+                    <input type="number" id="count-quiz-input" class="quiz-input" placeholder="0">
+                    <button id="count-quiz-submit" class="action-btn">Check</button>
+                    <button id="count-quiz-dismiss" class="clear-bet-btn">skip</button>
+                </div>
+                <div id="count-quiz-result" class="quiz-result"></div>
+            </div>
+
+            <!-- New hand -->
+            <button id="new-hand-btn" class="action-btn" style="display:none;">New Hand</button>
+        </div>
+
+    <script src="js/card.js"></script>
+    <script src="js/hand.js"></script>
+    <script src="js/payout.js"></script>
+    <script src="js/strategy.js"></script>
+    <script src="js/counting.js"></script>
+    <script src="js/game.js"></script>
+    <script src="js/ui.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
