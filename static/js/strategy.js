@@ -260,6 +260,92 @@ const Strategy = (() => {
         return null;
     }
 
+    /**
+     * Approximate EV for each action given player hand and dealer upcard.
+     * Uses simplified probability model based on player total vs dealer upcard.
+     * Returns an object like { H: -0.12, S: -0.18, D: -0.24 }
+     */
+    function getApproxEV(hand, dealerUpcard) {
+        const dk = dealerKey(dealerUpcard);
+        if (!dk) return {};
+
+        const total = hand.score();
+        const soft = hand.isSoft();
+        const canDouble = hand.cards.length === 2;
+
+        // Dealer bust probabilities by upcard (approximation from standard tables)
+        const dealerBustProb = {
+            '2': 0.354, '3': 0.374, '4': 0.404, '5': 0.428, '6': 0.423,
+            '7': 0.262, '8': 0.244, '9': 0.230, '10': 0.214, 'A': 0.116
+        };
+
+        // Dealer expected final score when not busting (approximate)
+        const dealerExpected = {
+            '2': 18.8, '3': 18.6, '4': 18.4, '5': 18.2, '6': 18.1,
+            '7': 17.8, '8': 18.2, '9': 18.6, '10': 18.8, 'A': 19.2
+        };
+
+        const bustP = dealerBustProb[dk] || 0.25;
+        const dealerAvg = dealerExpected[dk] || 18.5;
+
+        // Probability player busts on a hit (rough approximation)
+        let hitBustProb = 0;
+        if (total >= 12) {
+            hitBustProb = Math.min((total - 11) / 13, 0.92);
+        }
+
+        // Average card value for hit approximation
+        const avgHitCard = 6.5;
+
+        // Stand EV: win if dealer busts + win if player total > dealer final
+        let standWinProb;
+        if (total >= 21) {
+            standWinProb = total === 21 ? bustP + (1 - bustP) * 0.9 : 0;
+        } else {
+            const beatProb = total > dealerAvg ? 0.6 + (total - dealerAvg) * 0.05 :
+                             total === Math.round(dealerAvg) ? 0.15 :
+                             Math.max(0.05, 0.4 - (dealerAvg - total) * 0.08);
+            standWinProb = bustP + (1 - bustP) * Math.min(beatProb, 0.95);
+        }
+        const standLoseProb = Math.max(0, 1 - standWinProb - 0.08);
+        const standEV = standWinProb - standLoseProb;
+
+        // Hit EV: probability of not busting * resulting stand EV + bust penalty
+        let hitEV;
+        if (total <= 11) {
+            // Can't bust on hit
+            const newTotal = soft ? Math.min(total + avgHitCard, 21) : total + avgHitCard;
+            const newBeatProb = newTotal > dealerAvg ? 0.55 : 0.25;
+            hitEV = bustP + (1 - bustP) * newBeatProb - (1 - bustP) * (1 - newBeatProb - 0.08);
+        } else {
+            const surviveProb = 1 - hitBustProb;
+            const newTotal = Math.min(total + 3, 21); // conservative avg improvement
+            const newBeatProb = newTotal > dealerAvg ? 0.5 : 0.2;
+            const surviveEV = bustP + (1 - bustP) * newBeatProb - (1 - bustP) * (1 - newBeatProb - 0.08);
+            hitEV = surviveProb * surviveEV + hitBustProb * (-1);
+        }
+
+        const result = {
+            S: Math.round(standEV * 100) / 100,
+            H: Math.round(hitEV * 100) / 100,
+        };
+
+        // Double EV: hit once then stand, doubled stakes
+        if (canDouble) {
+            result.D = Math.round(hitEV * 2 * 100) / 100;
+        }
+
+        // Split EV: rough approximation
+        if (hand.isPair() && hand.cards.length === 2) {
+            const singleValue = hand.cards[0].value === 11 ? 11 : hand.cards[0].value;
+            // Each split hand starts with one card; approximate as slightly worse than initial EV
+            const splitHandEV = singleValue >= 8 ? standEV * 0.8 : hitEV * 0.7;
+            result.P = Math.round(splitHandEV * 2 * 100) / 100;
+        }
+
+        return result;
+    }
+
     return {
         HARD,
         SOFT,
@@ -274,6 +360,7 @@ const Strategy = (() => {
         getFrequencyBreakdown,
         getBetRecommendation,
         getDeviation,
+        getApproxEV,
     };
 })();
 
@@ -289,6 +376,7 @@ class AccuracyTracker {
             soft: { correct: 0, total: 0 },
             pair: { correct: 0, total: 0 },
         };
+        this.misplays = []; // { playerHand, dealerUpcard, playerAction, optimalAction, handType }
     }
 
     record(handType, wasCorrect) {
@@ -300,6 +388,26 @@ class AccuracyTracker {
             bucket.total++;
             if (wasCorrect) bucket.correct++;
         }
+    }
+
+    recordMisplay(playerHand, dealerUpcard, playerAction, optimalAction, handType) {
+        this.misplays.push({
+            playerHand: playerHand,
+            dealerUpcard: dealerUpcard,
+            playerAction: playerAction,
+            optimalAction: optimalAction,
+            handType: handType,
+        });
+    }
+
+    getMisplaysByType() {
+        const grouped = { hard: [], soft: [], pair: [] };
+        for (const m of this.misplays) {
+            if (grouped[m.handType]) {
+                grouped[m.handType].push(m);
+            }
+        }
+        return grouped;
     }
 
     overallPct() {
@@ -318,6 +426,7 @@ class AccuracyTracker {
         for (const key in this.byType) {
             this.byType[key] = { correct: 0, total: 0 };
         }
+        this.misplays = [];
     }
 }
 

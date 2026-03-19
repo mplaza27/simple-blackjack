@@ -133,6 +133,10 @@ describe('Dealer behavior', () => {
         const game = new Game(shoe);
         game.placeBet(10);
         game.deal();
+        // Dealer shows Ace → insurance offered; decline to proceed
+        if (game.state === GameState.INSURANCE) {
+            game.declineInsurance();
+        }
         game.stand();
         // Dealer started with soft 17 (A+6), should have hit
         expect(game.dealerHand.cards.length).toBeGreaterThan(2);

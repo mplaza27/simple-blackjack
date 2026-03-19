@@ -12,12 +12,15 @@
             <div id="top-bar">
                 <div class="top-left">
                 <div class="chips">Chips: <span id="bankroll">1000</span> <button id="reset-bankroll-btn" class="reset-btn">reset</button></div>
-                <div class="chips">Accuracy: <span id="accuracy-overall">—</span></div>
+                <div class="chips">Accuracy: <span id="accuracy-overall">&mdash;</span></div>
             </div>
-                <div id="shuffle-indicator" style="display:none;">Shuffling...</div>
-                <div id="count-display" class="count-badge" title="Click to reveal count">
-                    <span id="count-label">Count:</span>
-                    <span id="count-value" class="count-hidden">???</span>
+                <div class="top-right-group">
+                    <div id="shuffle-indicator" style="display:none;">Shuffling...</div>
+                    <div id="count-display" class="count-badge" title="Click to reveal count">
+                        <span id="count-label">Count:</span>
+                        <span id="count-value" class="count-hidden">???</span>
+                    </div>
+                    <div class="shoe" title="Card shoe"></div>
                 </div>
             </div>
 
@@ -38,6 +41,14 @@
             <!-- Message -->
             <div id="message" class="message"></div>
 
+            <!-- Insurance prompt -->
+            <div id="insurance-prompt" style="display:none;">
+                <div class="insurance-text">Dealer shows Ace. Insurance?</div>
+                <div class="insurance-buttons">
+                    <button id="insurance-accept-btn" class="action-btn">Accept</button>
+                    <button id="insurance-decline-btn" class="action-btn">Decline</button>
+                </div>
+            </div>
 
             <!-- Action buttons -->
             <div id="action-buttons" style="display:none;">
@@ -45,6 +56,7 @@
                 <button id="stand-btn" class="action-btn">Stand</button>
                 <button id="double-btn" class="action-btn">Double</button>
                 <button id="split-btn" class="action-btn" disabled>Split</button>
+                <button id="surrender-btn" class="action-btn" disabled>Surrender</button>
             </div>
 
             <!-- Strategy hint & feedback -->
@@ -58,7 +70,7 @@
             <!-- Betting controls -->
             <div id="betting-controls">
                 <div class="bet-row">
-                    <span>Bet: <span id="bet-display">—</span></span>
+                    <span>Bet: <span id="bet-display">&mdash;</span></span>
                     <button class="bet-btn" data-amount="10">10</button>
                     <button class="bet-btn" data-amount="25">25</button>
                     <button class="bet-btn" data-amount="50">50</button>
@@ -66,6 +78,10 @@
                     <button class="clear-bet-btn" id="clear-bet-btn">clear</button>
                 </div>
                 <button id="deal-btn" class="action-btn deal">Deal</button>
+                <div class="mode-buttons">
+                    <button id="drill-toggle-btn" class="reset-btn">Drill Mode</button>
+                    <button id="summary-btn" class="reset-btn">Summary</button>
+                </div>
             </div>
 
             <!-- Count quiz -->
@@ -81,6 +97,38 @@
 
             <!-- New hand -->
             <button id="new-hand-btn" class="action-btn" style="display:none;">New Hand</button>
+
+            <!-- Drill Mode Section -->
+            <div id="drill-section" style="display:none;">
+                <div class="drill-header">
+                    <div class="label">Drill Mode</div>
+                    <button id="drill-exit-btn" class="reset-btn">Exit Drill</button>
+                </div>
+                <div id="drill-table">
+                    <div class="drill-area">
+                        <div class="label">Dealer</div>
+                        <div id="drill-dealer-cards" class="card-row"></div>
+                    </div>
+                    <div class="drill-area">
+                        <div class="label">Player</div>
+                        <div id="drill-player-cards" class="card-row"></div>
+                        <div id="drill-player-score" class="score"></div>
+                    </div>
+                </div>
+                <div id="drill-actions">
+                    <button class="action-btn drill-action-btn" data-action="H">Hit</button>
+                    <button class="action-btn drill-action-btn" data-action="S">Stand</button>
+                    <button class="action-btn drill-action-btn" data-action="D">Double</button>
+                    <button class="action-btn drill-action-btn" data-action="P">Split</button>
+                </div>
+                <div id="drill-feedback" class="drill-feedback"></div>
+                <div id="drill-stats" class="drill-stats"></div>
+                <div id="drill-weak-spots" class="drill-weak-spots" style="display:none;"></div>
+                <button id="drill-next-btn" class="action-btn deal" style="display:none;">Next</button>
+            </div>
+
+            <!-- Session Summary -->
+            <div id="session-summary" style="display:none;"></div>
         </div>
 
     <script src="js/card.js"></script>
@@ -89,6 +137,7 @@
     <script src="js/strategy.js"></script>
     <script src="js/counting.js"></script>
     <script src="js/game.js"></script>
+    <script src="js/drill.js"></script>
     <script src="js/ui.js"></script>
     <script src="js/app.js"></script>
 </body>

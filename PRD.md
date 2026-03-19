@@ -438,81 +438,35 @@ Each phase is complete when:
 
 ---
 
-## Current Status & Revised Plan (2026-03-19)
+## Current Status (2026-03-19)
 
-### Completed Phases
-- **Phase 1** — Card, Deck & Hand: Done. `card.js`, `hand.js` fully functional.
-- **Phase 2** — Core Game Flow: Partially done. Deal/Hit/Stand/Dealer play/Resolution work. **Double/Split/Surrender buttons exist but are non-functional** (disabled, no listeners, no game logic).
-- **Phase 3** — Strategy Engine & Hints: Done. Strategy tables, hint button, accuracy tracking all work.
-- **Phase 4** — Card Counting: Done. Hi-Lo running/true count, toggle display, shoe persistence all work.
+### All Core Phases Complete
 
-### Remaining Work (Revised Order)
+- **Phase 1** — Card, Deck & Hand: `card.js`, `hand.js` fully functional.
+- **Phase 2** — Core Game Flow: Deal/Hit/Stand/Double/Split/Surrender/Insurance all work. Animated dealing from shoe. Blackjack reveal after animation.
+- **Phase 3** — Strategy Engine: 6-deck H17 DAS tables, Coach popup with contextual advice, frequency breakdowns, Illustrious 18 deviations, approximate EV per action.
+- **Phase 4** — Card Counting: Hi-Lo RC/TC, blurred toggle display, count quiz every 5-8 hands.
+- **Phase 5** — Advanced Actions: Double (bet doubles, one card, auto-stand), Split (multi-hand, side-by-side, max 3, aces auto-stand), Surrender (late, half bet), Insurance (INSURANCE state, prompt on dealer Ace, 2:1 payout).
+- **Phase 6** — Drill Mode: Random hand generator (40% hard, 30% soft, 30% pair), instant feedback, weak spot detection after 50+ drills.
+- **Phase 7** — Polish & Deploy: Retro pixel aesthetic (Press Start 2P), shoe visual, card animations, session summary, GitHub Pages deployment via Actions.
 
-Original phases 5–7 are restructured. The UI visual overhaul (originally Phase 7) is pulled forward because the current flat design undermines the "Realism First" design principle and the button issues are intertwined with the visual rework.
+### Design
+- Retro pixel UI with Press Start 2P font, dark navy palette, gold accents
+- Card shoe visual in top-right, cards animate from shoe position
+- Split hands render side-by-side with active hand highlight
+- Coach popup: optimal play, frequency breakdown, deviations, EV values
+- Session summary: misplayed hands grouped by type
+- Close-call detection for 50/50 hands
 
-#### Phase 5A: CSS Bug Fix & Visual Overhaul (was Phase 7, pulled forward)
+### Deployed
+- GitHub Pages: https://mplaza27.github.io/simple-blackjack/
+- CI/CD: GitHub Actions deploys `static/` on push to main
 
-**Problem:** The UI is functional but flat — plain green background, rectangular buttons, no card animations, no responsive design. Does not feel like a real blackjack table.
-
-**Design direction** (based on research of top browser blackjack games):
-
-| Element | Current | Target |
-|---------|---------|--------|
-| Table background | Flat `#0d5e2e` | Rich felt texture via CSS radial gradient + subtle noise |
-| Table frame | None | Dark wood/charcoal border wrapping the felt area |
-| Cards | Flat styled divs, appear instantly | Drop shadows, slight overlap/rotation, slide-in dealing animation |
-| Card backs | Simple pattern | Detailed crosshatch or casino-style back |
-| Action buttons | Flat rectangles | Casino chip / raised 3D style with gradients and glow on hover |
-| Bet chips | Rectangular buttons | Circular chip shapes with denominations |
-| Disabled buttons | Just grayed | Clearly inactive — no glow, muted, distinct from active |
-| Score display | Plain text | Badge-style pill with background |
-| Typography | Single font, uniform size | Display/serif font for scores, larger/bolder key numbers |
-| Responsiveness | None (fixed 700px) | Media queries: mobile (<480px), tablet (480-768px), desktop |
-| Spacing | Cramped | More vertical breathing room between areas |
-
-**CSS bug to fix first:** `#strategy-area` in `style.css` has `display: none` (line 203) overridden by `display: flex` (line 205). Remove the dead `display: none`.
-
-**Deliverables:**
-- Redesigned `style.css` with felt texture, table frame, improved cards, chip-style buttons
-- Card dealing animation (CSS keyframes or JS-driven transitions)
-- Responsive layout with mobile/tablet/desktop breakpoints
+### Remaining Polish
+- Responsive layout (mobile/tablet breakpoints)
 - Touch targets >= 44px on mobile
-- Updated visual regression baselines
-
-#### Phase 5B: Advanced Actions — Double, Split, Surrender, Insurance
-
-**Problem:** These buttons are in the HTML but permanently disabled. No game logic, no event listeners, no payout wiring exists.
-
-**Implementation per action:**
-
-| Action | Game Logic (`game.js`) | Event Wiring (`app.js`) | UI (`ui.js`) | Payout (`payout.js`) |
-|--------|----------------------|------------------------|-------------|-------------------|
-| **Double** | `double()` method: double bet, deal 1 card, end turn | Add click listener, call `game.double()` | Enable only on first 2 cards, disable after hit | Pay 2x on win |
-| **Split** | `split()` method: create 2 hands from pair, manage hand switching | Add click listener, call `game.split()` | Enable only on matching rank pair, render split hands side-by-side, highlight active hand | Resolve each hand independently |
-| **Surrender** | `surrender()` method: end hand, return half bet | Add click listener, call `game.surrender()` | Enable only on first 2 cards (pre-action), hide after any action | Return half bet |
-| **Insurance** | Insurance offer when dealer shows Ace, side bet tracking | Add prompt/button when dealer upcard is Ace | Show insurance prompt between deal and player turn | Pay 2:1 if dealer BJ, lose if not |
-
-**Button state management** (new logic needed in `ui.js` + `game.js`):
-- After deal: enable Hit, Stand. Enable Double if 2 cards and bankroll >= 2x bet. Enable Split if pair of matching rank. Enable Surrender (first action only).
-- After first hit: disable Double, Split, Surrender. Only Hit and Stand remain.
-- After split: manage per-hand state, disable re-split at max 3 hands.
-
-**Deliverables:**
-- `game.js`: `double()`, `split()`, `surrender()` methods + action validation
-- `app.js`: event listeners for all four actions
-- `ui.js`: conditional button enable/disable, split hand rendering, insurance prompt
-- `payout.js`: double/split/surrender/insurance payout resolution
-- All Phase 5 tests from the original test plan above
-
-#### Phase 6: Drill Mode (unchanged)
-
-As specified in original Phase 6 above. No changes.
-
-#### Phase 7: Final Polish & Deploy (slimmed down)
-
-Most visual polish moved to Phase 5A. Remaining:
-- Shuffling indicator animation
-- Chip stack visual for bankroll
-- GitHub Actions CI/CD pipeline
-- Final visual regression baselines
+- Sound effects (8-bit)
+- localStorage for persisting stats
+- Additional unit tests for split/insurance/drill
+- Playwright E2E tests
 - Cross-browser testing

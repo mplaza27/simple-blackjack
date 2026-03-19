@@ -7,6 +7,7 @@
     const game = new Game(shoe);
     const tracker = new AccuracyTracker();
     const counter = new CardCounter(shoe.numDecks);
+    const drill = new DrillMode();
 
     let currentOptimal = null;
     let hintRevealed = false;
@@ -26,15 +27,16 @@
     function countNewCards() {
         const visible = [];
 
-        if (game.playerHand) {
-            for (const card of game.playerHand.cards) {
+        // Count all player hands (supports split)
+        for (const hand of game.playerHands) {
+            for (const card of hand.cards) {
                 visible.push(card);
             }
         }
 
         if (game.dealerHand) {
             visible.push(game.dealerHand.cards[0]);
-            if (game.state !== GameState.PLAYER_TURN && game.state !== GameState.DEALING) {
+            if (game.state !== GameState.PLAYER_TURN && game.state !== GameState.DEALING && game.state !== GameState.INSURANCE) {
                 if (game.dealerHand.cards.length >= 2) {
                     visible.push(game.dealerHand.cards[1]);
                 }
@@ -80,6 +82,16 @@
         const wasCorrect = actionCode === currentOptimal;
         const countAsCorrect = wasCorrect || isClose;
         tracker.record(type, countAsCorrect);
+
+        // Track misplays for session summary
+        if (!wasCorrect && !isClose) {
+            const hand = game.playerHand;
+            const upcard = game.dealerUpcard();
+            const handStr = hand.cards.map(c => c.toString()).join(', ');
+            const upcardStr = upcard.toString();
+            tracker.recordMisplay(handStr, upcardStr, playerActionName, Strategy.ACTION_NAMES[currentOptimal], type);
+        }
+
         UI.showFeedback(wasCorrect, prefix + Strategy.ACTION_NAMES[currentOptimal], breakdown, playerActionName);
         UI.updateAccuracy(tracker);
         feedbackShown = true;
@@ -97,6 +109,55 @@
             handsSinceQuiz = 0;
             nextQuizAt = randomBetween(5, 8);
             UI.showCountQuiz(counter);
+        }
+    }
+
+    /** Handle standing with split support (dealer animation) */
+    async function handleStandOrAdvance() {
+        if (game.playerHands.length > 1) {
+            // Split: stand on current hand, check if more hands
+            recordAction('S');
+            const prevState = game.state;
+            game.stand();
+            countNewCards();
+            computeOptimal();
+
+            if (game.state === GameState.PLAYER_TURN) {
+                // More hands to play
+                feedbackShown = false;
+                moveNumber = 0;
+                UI.clearFeedback();
+                updateAll();
+                actionLocked = false;
+            } else {
+                // All hands done, dealer plays
+                UI._hideSectionInstant(UI.elements.actionButtons);
+                UI._animatingDealer = true;
+                await UI.revealHoleCard(game);
+                await UI.dealerHitsAnimated(game);
+                UI._animatingDealer = false;
+                updateAll();
+                actionLocked = false;
+                checkCountQuiz();
+            }
+        } else {
+            // Single hand: normal stand
+            recordAction('S');
+            game.stand();
+
+            UI._hideSectionInstant(UI.elements.actionButtons);
+
+            countNewCards();
+            computeOptimal();
+
+            UI._animatingDealer = true;
+            await UI.revealHoleCard(game);
+            await UI.dealerHitsAnimated(game);
+            UI._animatingDealer = false;
+
+            updateAll();
+            actionLocked = false;
+            checkCountQuiz();
         }
     }
 
@@ -158,6 +219,7 @@
 
             actionLocked = true;
             const isBlackjack = game.state === GameState.RESOLUTION;
+            const isInsurance = game.state === GameState.INSURANCE;
 
             countedCardCount = 0;
             countNewCards();
@@ -167,6 +229,7 @@
             moveNumber = 0;
             UI.clearFeedback();
             UI.clearHint();
+            UI.hideSessionSummary();
 
             // Temporarily hide result so it doesn't show during animation
             const savedState = game.state;
@@ -174,16 +237,18 @@
             if (isBlackjack) {
                 game.state = GameState.DEALING;
                 game.result = null;
+            } else if (isInsurance) {
+                game.state = GameState.DEALING;
             }
 
             UI.update(game);
             await UI.dealAnimated(game);
 
             // Restore state after animation
-            if (isBlackjack) {
-                game.state = savedState;
-                game.result = savedResult;
+            game.state = savedState;
+            game.result = savedResult;
 
+            if (isBlackjack) {
                 // Reveal dealer hole card for blackjack
                 UI._animatingDealer = true;
                 await UI.revealHoleCard(game);
@@ -193,6 +258,54 @@
             computeOptimal();
             UI.update(game);
             actionLocked = false;
+        });
+
+        // Insurance accept
+        document.getElementById('insurance-accept-btn').addEventListener('click', async () => {
+            if (game.state !== GameState.INSURANCE || actionLocked) return;
+            actionLocked = true;
+
+            game.takeInsurance();
+            UI.hideInsurancePrompt();
+
+            if (game.state === GameState.RESOLUTION) {
+                // Dealer had blackjack
+                countNewCards();
+                UI._animatingDealer = true;
+                await UI.revealHoleCard(game);
+                UI._animatingDealer = false;
+                updateAll();
+                actionLocked = false;
+                checkCountQuiz();
+            } else {
+                computeOptimal();
+                updateAll();
+                actionLocked = false;
+            }
+        });
+
+        // Insurance decline
+        document.getElementById('insurance-decline-btn').addEventListener('click', async () => {
+            if (game.state !== GameState.INSURANCE || actionLocked) return;
+            actionLocked = true;
+
+            game.declineInsurance();
+            UI.hideInsurancePrompt();
+
+            if (game.state === GameState.RESOLUTION) {
+                // Dealer had blackjack
+                countNewCards();
+                UI._animatingDealer = true;
+                await UI.revealHoleCard(game);
+                UI._animatingDealer = false;
+                updateAll();
+                actionLocked = false;
+                checkCountQuiz();
+            } else {
+                computeOptimal();
+                updateAll();
+                actionLocked = false;
+            }
         });
 
         // Coach button — show full contextual advice (toggleable)
@@ -209,24 +322,38 @@
             game.hit();
             countNewCards();
 
-            const newCard = game.playerHand.cards[game.playerHand.cards.length - 1];
-            UI.addCardAnimated(UI.elements.playerCards, newCard, false);
+            if (game.playerHands.length > 1) {
+                // Split hand: update the split display
+                updateAll();
 
-            const score = game.playerHand.score();
-            const soft = game.playerHand.isSoft() ? ' (soft)' : '';
-            UI.elements.playerScore.textContent = score + soft;
-            UI._triggerScoreBounce(UI.elements.playerScore.closest('.score'));
+                if (game.state === GameState.PLAYER_TURN) {
+                    feedbackShown = false;
+                    computeOptimal();
+                } else if (game.state === GameState.DEALER_TURN || game.state === GameState.RESOLUTION) {
+                    // All hands resolved
+                    checkCountQuiz();
+                }
+            } else {
+                const newCard = game.playerHand.cards[game.playerHand.cards.length - 1];
+                UI.addCardAnimated(UI.elements.playerCards, newCard, false);
 
-            // Disable double/split after hit
-            if (UI.elements.doubleBtn) UI.elements.doubleBtn.disabled = true;
-            if (UI.elements.splitBtn) UI.elements.splitBtn.disabled = true;
+                const score = game.playerHand.score();
+                const soft = game.playerHand.isSoft() ? ' (soft)' : '';
+                UI.elements.playerScore.textContent = score + soft;
+                UI._triggerScoreBounce(UI.elements.playerScore.closest('.score'));
 
-            feedbackShown = false;
-            computeOptimal();
+                // Disable double/split/surrender after hit
+                if (UI.elements.doubleBtn) UI.elements.doubleBtn.disabled = true;
+                if (UI.elements.splitBtn) UI.elements.splitBtn.disabled = true;
+                if (UI.elements.surrenderBtn) UI.elements.surrenderBtn.disabled = true;
 
-            if (game.state === GameState.RESOLUTION) {
-                UI.update(game);
-                checkCountQuiz();
+                feedbackShown = false;
+                computeOptimal();
+
+                if (game.state === GameState.RESOLUTION) {
+                    UI.update(game);
+                    checkCountQuiz();
+                }
             }
         });
 
@@ -239,6 +366,29 @@
 
             game.double();
             countNewCards();
+
+            if (game.playerHands.length > 1) {
+                // Split hand double
+                updateAll();
+                if (game.state === GameState.PLAYER_TURN) {
+                    feedbackShown = false;
+                    moveNumber = 0;
+                    UI.clearFeedback();
+                    computeOptimal();
+                    actionLocked = false;
+                } else {
+                    // All hands done
+                    UI._hideSectionInstant(UI.elements.actionButtons);
+                    UI._animatingDealer = true;
+                    await UI.revealHoleCard(game);
+                    await UI.dealerHitsAnimated(game);
+                    UI._animatingDealer = false;
+                    updateAll();
+                    actionLocked = false;
+                    checkCountQuiz();
+                }
+                return;
+            }
 
             // Animate the one new card
             const newCard = game.playerHand.cards[game.playerHand.cards.length - 1];
@@ -271,26 +421,38 @@
             checkCountQuiz();
         });
 
+        // Split
+        document.getElementById('split-btn').addEventListener('click', () => {
+            if (game.state !== GameState.PLAYER_TURN || actionLocked) return;
+            if (!game.playerHand.isPair()) return;
+            recordAction('P');
+
+            game.split();
+            countNewCards();
+
+            feedbackShown = false;
+            moveNumber = 0;
+            UI.clearFeedback();
+            computeOptimal();
+            updateAll();
+        });
+
+        // Surrender
+        document.getElementById('surrender-btn').addEventListener('click', () => {
+            if (game.state !== GameState.PLAYER_TURN || actionLocked) return;
+            if (game.playerHand.cards.length !== 2) return;
+            recordAction('S'); // surrender isn't in basic strategy tables, treat as stand-like
+            game.surrender();
+            countNewCards();
+            updateAll();
+            checkCountQuiz();
+        });
+
         // Stand
         document.getElementById('stand-btn').addEventListener('click', async () => {
             if (game.state !== GameState.PLAYER_TURN || actionLocked) return;
             actionLocked = true;
-            recordAction('S');
-            game.stand();
-
-            UI._hideSectionInstant(UI.elements.actionButtons);
-
-            countNewCards();
-            computeOptimal();
-
-            UI._animatingDealer = true;
-            await UI.revealHoleCard(game);
-            await UI.dealerHitsAnimated(game);
-            UI._animatingDealer = false;
-
-            UI.update(game);
-            actionLocked = false;
-            checkCountQuiz();
+            await handleStandOrAdvance();
         });
 
         // New hand
@@ -318,6 +480,54 @@
 
         document.getElementById('count-quiz-dismiss').addEventListener('click', () => {
             UI.dismissCountQuiz();
+        });
+
+        // ── Drill Mode ──
+
+        document.getElementById('drill-toggle-btn').addEventListener('click', () => {
+            if (drill.active) return;
+            drill.start();
+            UI.showDrillMode();
+            UI.renderDrillHand(drill);
+            UI.updateDrillStats(drill);
+            document.getElementById('drill-next-btn').style.display = 'none';
+        });
+
+        document.getElementById('drill-exit-btn').addEventListener('click', () => {
+            drill.stop();
+            UI.hideDrillMode();
+            updateAll();
+        });
+
+        // Drill action buttons
+        document.querySelectorAll('.drill-action-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                if (!drill.active || !drill.currentHand) return;
+                const actionCode = btn.dataset.action;
+                const result = drill.answer(actionCode);
+                if (result) {
+                    UI.showDrillFeedback(result);
+                    UI.updateDrillStats(drill);
+                    document.getElementById('drill-next-btn').style.display = 'inline-block';
+                }
+            });
+        });
+
+        document.getElementById('drill-next-btn').addEventListener('click', () => {
+            if (!drill.active) return;
+            drill.generateHand();
+            UI.renderDrillHand(drill);
+            document.getElementById('drill-next-btn').style.display = 'none';
+        });
+
+        // ── Session Summary ──
+
+        document.getElementById('summary-btn').addEventListener('click', () => {
+            if (UI.elements.summarySection && UI.elements.summarySection.style.display === 'block') {
+                UI.hideSessionSummary();
+            } else {
+                UI.showSessionSummary(tracker);
+            }
         });
     });
 })();

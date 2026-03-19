@@ -4,69 +4,64 @@ Tracks remaining work aligned with the PRD. Updated 2026-03-19.
 
 ---
 
-## Phase 5A: CSS Bug Fix & Visual Overhaul
+## Completed
 
-- [ ] Fix CSS bug: remove dead `display: none` on `#strategy-area` (style.css line 203)
-- [ ] Redesign table background: felt texture via CSS radial gradients + dark wood/charcoal frame border
-- [ ] Redesign card rendering: drop shadows, slight overlap/rotation, slide-in dealing animation
-- [ ] Redesign card backs: detailed crosshatch or casino-style pattern
-- [ ] Redesign action buttons: raised 3D / casino chip style, gradients, gold glow on hover
-- [ ] Redesign bet chips: circular chip shapes with denominations (not rectangles)
-- [ ] Redesign disabled buttons: clearly inactive — muted, no glow, distinct from active
-- [ ] Redesign score displays: badge-style pills with subtle background
-- [ ] Typography pass: display/serif font for scores & key numbers, larger/bolder weights
+### Phase 5A: CSS Bug Fix & Visual Overhaul
+- [x] Fix CSS bug: remove dead `display: none` on `#strategy-area`
+- [x] Redesign to retro pixel aesthetic (Press Start 2P font, pixel borders, dark navy palette)
+- [x] Card dealing animation from shoe position (top-right)
+- [x] Card back pattern (checkerboard conic gradient)
+- [x] Action buttons: retro pixel style with box-shadow press effects
+- [x] Bet chips: square retro buttons with color coding
+- [x] Disabled buttons: clearly muted/inactive
+- [x] Score displays: gold accent inline text
+- [x] Shoe visual element in top-right corner
+
+### Phase 5B: Advanced Actions
+- [x] **Double Down** — `game.js` double() method, UI enable/disable on first 2 cards, animated card + dealer play
+- [x] **Split** — multi-hand support, side-by-side rendering, max 3 hands, split Aces auto-stand, per-hand resolution
+- [x] **Insurance** — INSURANCE state, prompt when dealer shows Ace, side bet of half original, pays 2:1 if dealer BJ
+- [x] **Surrender** — late surrender on first 2 cards, returns half bet
+- [x] **Button state management** — conditional enable/disable based on game state, cards, bankroll
+
+### Phase 6: Drill Mode
+- [x] `drill.js`: random hand + dealer upcard generator (40% hard, 30% soft, 30% pair)
+- [x] Instant correct/wrong feedback against strategy table
+- [x] No shoe state — pure strategy memorization
+- [x] After 50+ drills, highlight weak hand types (< 80% accuracy)
+- [x] Separate UI view/mode toggled from main game
+
+### Strategy & Learning Features
+- [x] Basic strategy engine (6-deck, H17, DAS) with correct tables
+- [x] Hi-Lo card counting with RC/TC display
+- [x] Illustrious 18 deviations with true count thresholds
+- [x] Coach popup: contextual advice, frequency breakdown, deviations, EV display
+- [x] Session summary: misplayed hands grouped by type
+- [x] Count quiz every 5-8 hands
+- [x] Close-call detection (50/50 hands counted as correct)
+- [x] Move-by-move feedback with breakdown
+- [x] Approximate EV display per action in coach
+
+### Deployment
+- [x] GitHub Actions CI/CD pipeline (deploy static/ to GitHub Pages)
+- [x] Deployed to mplaza27.github.io/simple-blackjack
+
+---
+
+## Remaining
+
+### Polish
 - [ ] Add responsive layout: `@media` breakpoints for mobile (<480px), tablet (480-768px), desktop
 - [ ] Ensure touch targets >= 44px on mobile
-- [ ] Add vertical breathing room between dealer area, player area, and controls
-
-## Phase 5B: Advanced Actions (Double, Split, Surrender, Insurance)
-
-- [ ] **Double Down**
-  - [ ] `game.js`: add `double()` method — double bet, deal 1 card, end turn
-  - [ ] `app.js`: add click listener
-  - [ ] `ui.js`: enable only on first 2 cards, disable after hit
-  - [ ] `payout.js`: pay 2x on win
-- [ ] **Split**
-  - [ ] `game.js`: add `split()` method — create 2 hands from matching rank pair, manage hand switching, max 3 hands, aces get 1 card each
-  - [ ] `app.js`: add click listener
-  - [ ] `ui.js`: enable only on matching rank pair, render split hands side-by-side, highlight active hand
-  - [ ] `payout.js`: resolve each hand independently
-- [ ] **Surrender**
-  - [ ] `game.js`: add `surrender()` method — end hand, return half bet
-  - [ ] `app.js`: add click listener
-  - [ ] `ui.js`: enable only on first 2 cards (pre-action), hide after any action
-  - [ ] `payout.js`: return half bet
-- [ ] **Insurance**
-  - [ ] `index.html`: add insurance prompt/button
-  - [ ] `game.js`: offer when dealer shows Ace, track side bet
-  - [ ] `app.js`: add listener for insurance accept/decline
-  - [ ] `ui.js`: show insurance prompt between deal and player turn
-  - [ ] `payout.js`: pay 2:1 if dealer BJ, lose side bet if not
-- [ ] **Button state management**
-  - [ ] After deal: enable Hit, Stand, Double (if bankroll >= 2x bet), Split (if matching rank), Surrender
-  - [ ] After first hit: disable Double, Split, Surrender — only Hit and Stand remain
-  - [ ] After split: per-hand state, disable re-split at max 3 hands
-
-## Phase 6: Drill Mode
-
-- [ ] `drill.js`: random hand + dealer upcard generator
-- [ ] Instant correct/wrong feedback against strategy table
-- [ ] No shoe state — pure strategy memorization
-- [ ] After 50+ drills, highlight weak hand types (< 80% accuracy)
-- [ ] Separate UI view/mode from main game
-
-## Phase 7: Final Polish & Deploy
-
-- [ ] Shuffling indicator animation
+- [ ] Sound effects (8-bit card deal, win/lose)
 - [ ] Chip stack visual for bankroll
-- [ ] GitHub Actions CI/CD pipeline (test + deploy)
-- [ ] Final visual regression baselines
-- [ ] Cross-browser testing
+- [ ] Shuffling indicator animation
+- [ ] localStorage for persisting stats across sessions
 
-## Testing
-
-- [ ] JS unit tests for double/split/surrender/insurance (`test_game.js`, `test_payout.js`)
-- [ ] Playwright E2E for advanced actions (`game-flow.spec.js`)
-- [ ] Playwright E2E for drill mode (`drill-mode.spec.js`)
-- [ ] Update visual regression baselines after redesign
+### Testing
+- [ ] JS unit tests for split/insurance/surrender/drill
+- [ ] Playwright E2E for advanced actions
+- [ ] Playwright E2E for drill mode
 - [ ] Mobile viewport E2E test
+- [ ] Cross-browser testing
+- [ ] Visual regression baselines
