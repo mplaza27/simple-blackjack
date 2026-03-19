@@ -157,6 +157,7 @@ const Strategy = (() => {
      */
     function getFrequencyBreakdown(hand) {
         const type = handType(hand);
+        const canDouble = hand.cards.length === 2;
         const counts = {};
 
         // Look up the row for this hand across all 10 dealer upcards
@@ -183,6 +184,8 @@ const Strategy = (() => {
                     action = row ? row[dk] : 'H';
                 }
             }
+            // Downgrade Double to Hit if can't double (3+ cards)
+            if (action === 'D' && !canDouble) action = 'H';
             counts[action] = (counts[action] || 0) + 1;
         }
 

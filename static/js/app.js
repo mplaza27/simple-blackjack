@@ -69,9 +69,11 @@
         const playerActionName = Strategy.ACTION_NAMES[actionCode];
         const prefix = moveNumber > 1 ? 'Move ' + moveNumber + ': ' : '';
 
-        // Check if it's a close call (player's action is valid 40%+ of the time)
+        // Check if it's a close call: only Hit vs Stand, both at 40%+
         let isClose = false;
-        if (breakdown && !((actionCode === currentOptimal))) {
+        const bothHitStand = (actionCode === 'H' || actionCode === 'S') &&
+                             (currentOptimal === 'H' || currentOptimal === 'S');
+        if (breakdown && bothHitStand && actionCode !== currentOptimal) {
             const match = breakdown.match(new RegExp(playerActionName + '\\s+(\\d+)%'));
             if (match && parseInt(match[1], 10) >= 40) {
                 isClose = true;
